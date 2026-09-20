@@ -24,9 +24,10 @@ from app.learning.engine import FactRecord
 
 @pytest.fixture
 async def temp_db(tmp_path):
-    db_file = tmp_path / "test_rewards.db"
+    db_file = tmp_path / "test_rewards.json"
     await init_db(db_file)
     return db_file
+
 
 
 @pytest.mark.asyncio
@@ -135,4 +136,32 @@ async def test_reset_bank_balance(temp_db):
     assert res == 0
     balance_after = await get_bank_balance(temp_db)
     assert balance_after == 0
+
+
+@pytest.mark.asyncio
+async def test_sqlite_migration(tmp_path):
+    import sqlite3
+
+    legacy_db = tmp_path / "rewards.db"
+    conn = sqlite3.connect(legacy_db)
+    conn.execute("CREATE TABLE facts (factor_a INTEGER, factor_b INTEGER, box INTEGER, consecutive_correct INTEGER, attempts INTEGER, wrong_count INTEGER, last_latency_ms REAL, avg_latency_ms REAL, last_seen REAL)")
+    conn.execute("INSERT INTO facts VALUES (6, 7, 2, 3, 4, 1, 1800.0, 2000.0, 100.0)")
+    conn.execute("CREATE TABLE settings (key TEXT, value TEXT)")
+    conn.execute("INSERT INTO settings VALUES ('bank_balance', '42')")
+    conn.commit()
+    conn.close()
+
+    json_path = tmp_path / "rewards.json"
+    assert not json_path.exists()
+
+    await init_db(json_path)
+    assert json_path.exists()
+
+    facts = await load_facts(json_path)
+    assert "6x7" in facts
+    assert facts["6x7"].box == 2
+
+    balance = await get_bank_balance(json_path)
+    assert balance == 42
+
 

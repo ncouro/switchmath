@@ -1,7 +1,7 @@
 services:
-  times-tables-rewards:
+  switchmath:
     build: .
-    container_name: times-tables-rewards
+    container_name: switchmath
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -9,5 +9,6 @@ services:
       - ./data:/app/data
       - ./.env:/app/.env
     environment:
-      - DATABASE_PATH=/app/data/rewards.db
+      - DATABASE_PATH=/app/data/rewards.json
+
 

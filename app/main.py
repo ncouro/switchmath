@@ -51,11 +51,17 @@ state = AppState()
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
+def get_db_path() -> str:
+    """Return configured database path or default JSON store."""
+    return os.environ.get("DATABASE_PATH", str(DEFAULT_DB_PATH))
+
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan setup: DB init, load stats, connect Nintendo."""
     load_dotenv(override=True)
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     await init_db(db_path)
 
     settings = await get_all_settings(db_path)
@@ -144,7 +150,7 @@ class LoginCompletion(BaseModel):
 @app.get("/api/status")
 async def get_status():
     """Return system, nintendo, and current session status."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     settings = await get_all_settings(db_path)
     today_rewarded = await get_today_rewarded_minutes(db_path)
     bank_balance = await get_bank_balance(db_path)
@@ -208,7 +214,7 @@ async def get_next_question():
 @app.post("/api/quiz/answer")
 async def submit_answer(payload: AnswerSubmission):
     """Process an answer, update delayed repetition queue, and credit rewards."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     settings = await get_all_settings(db_path)
     reward_mode = settings.get("reward_mode", "bank")
 
@@ -220,7 +226,7 @@ async def submit_answer(payload: AnswerSubmission):
         latency_ms=payload.latency_ms,
     )
 
-    # 2. Persist fact learning state to SQLite
+    # 2. Persist fact learning state to JSON storage
     fact = state.engine.facts[f"{payload.factor_a}x{payload.factor_b}"]
     await save_fact(fact, db_path)
 
@@ -299,7 +305,7 @@ async def submit_answer(payload: AnswerSubmission):
 @app.post("/api/bank/adjust")
 async def adjust_bank(payload: BankAdjustment):
     """Manually add or deduct minutes from the child's screen time bank."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     new_balance = await adjust_bank_minutes(payload.minutes, payload.reason or "Manual", db_path)
 
     note = f"Manual Bank {'+' if payload.minutes >= 0 else ''}{payload.minutes}m: {payload.reason}"
@@ -324,7 +330,7 @@ async def adjust_bank(payload: BankAdjustment):
 @app.post("/api/bank/sync-to-switch")
 async def sync_bank_to_switch(payload: ManualTimeInjection):
     """Transfer minutes from the Screen Time Bank directly to Nintendo Switch."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     bank_balance = await get_bank_balance(db_path)
 
     if payload.minutes > bank_balance:
@@ -369,7 +375,7 @@ async def sync_bank_to_switch(payload: ManualTimeInjection):
 @app.post("/api/bank/reset")
 async def reset_bank_endpoint():
     """Reset the screen time bank balance back to 0."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     await reset_bank_balance(db_path)
     logger.info("Screen Time Bank balance was reset to 0.")
     return {
@@ -383,7 +389,7 @@ async def reset_bank_endpoint():
 @app.post("/api/nintendo/add-time-manual")
 async def add_time_manual(payload: ManualTimeInjection):
     """Directly send extra playtime to a Nintendo Switch console on demand."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
 
     if not state.nintendo.is_connected:
         # Try reconnecting
@@ -433,9 +439,9 @@ async def cancel_extra_time_endpoint():
 @app.post("/api/rewards/reset-today")
 async def reset_today_allowance_endpoint():
     """Reset today's claimed rewards and bonus allowance back to 0 for a fresh start."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
 
-    # 1. Reset SQLite today's reward records
+    # 1. Reset today's reward records in JSON store
     cleared_count = await reset_today_rewards(db_path)
 
     # 2. Reset session unclaimed correct questions to 0
@@ -475,7 +481,7 @@ async def reset_today_allowance_endpoint():
 @app.post("/api/rewards/claim")
 async def manual_claim_reward():
     """Manual claim button for earned milestone."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     settings = await get_all_settings(db_path)
 
     mins_to_grant = settings["minutes_per_reward"]
@@ -524,7 +530,7 @@ async def manual_claim_reward():
 @app.get("/api/stats")
 async def get_stats():
     """Return times tables mastery matrix (2 to 12) and reward history."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     matrix = state.engine.get_mastery_matrix()
     recent = await get_recent_rewards(limit=15, db_path=db_path)
     today_awarded = await get_today_rewarded_minutes(db_path)
@@ -551,7 +557,7 @@ async def get_stats():
 @app.get("/api/settings")
 async def get_settings():
     """Fetch current app configuration."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
     settings = await get_all_settings(db_path)
     settings["selected_device_id"] = state.selected_device_id
     return settings
@@ -560,7 +566,7 @@ async def get_settings():
 @app.post("/api/settings")
 async def update_settings(payload: SettingsUpdate):
     """Update application settings."""
-    db_path = os.environ.get("DATABASE_PATH", "data/rewards.db")
+    db_path = get_db_path()
 
     if payload.questions_per_reward is not None:
         await set_setting("questions_per_reward", str(payload.questions_per_reward), db_path)
@@ -686,15 +692,21 @@ async def root():
 
 
 def cli():
-    """Entry point for running the application."""
+    """Entry point for `uv run switchmath`."""
+    import argparse
     import uvicorn
 
-    host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", "8000"))
-    uvicorn.run("app.main:app", host=host, port=port, reload=False)
+    parser = argparse.ArgumentParser(description="SwitchMath - Times Tables with Nintendo Switch Rewards")
+    parser.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0"), help="Host interface (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")), help="Port to listen on (default: 8000)")
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
+    args = parser.parse_args()
+
+    uvicorn.run("app.main:app", host=args.host, port=args.port, reload=args.reload)
 
 
 if __name__ == "__main__":
     cli()
+
 
 

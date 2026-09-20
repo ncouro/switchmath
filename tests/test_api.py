@@ -7,7 +7,7 @@ from app.main import app
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
-    test_db = tmp_path / "test_api.db"
+    test_db = tmp_path / "test_api.json"
     monkeypatch.setenv("DATABASE_PATH", str(test_db))
     with TestClient(app) as test_client:
         yield test_client
