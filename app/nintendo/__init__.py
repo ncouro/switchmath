@@ -1,0 +1,2 @@
+"""Nintendo integration package."""
+

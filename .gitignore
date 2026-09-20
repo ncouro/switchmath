@@ -1,0 +1,37 @@
+# Virtual environments
+venv/
+.venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Application data & secrets
+data/
+.env
+*.db
+*.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*~
+
+# Build & distribution
+build/
+dist/
+*.egg-info/
+
+# OS
+.DS_Store
+
+# AI tooling
+.gemini/
+

@@ -1,0 +1,13 @@
+services:
+  times-tables-rewards:
+    build: .
+    container_name: times-tables-rewards
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - DATABASE_PATH=/app/data/rewards.db
+

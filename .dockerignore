@@ -1,0 +1,34 @@
+# Virtual environments
+.venv/
+venv/
+
+# Application data & secrets
+.env
+data/
+
+# Git
+.git/
+
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# AI tooling
+.gemini/
+
+# Documentation & config not needed in image
+README.md
+LICENSE
+

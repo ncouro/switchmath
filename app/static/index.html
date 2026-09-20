@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Times Tables Quest - Nintendo Switch Rewards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=2.2">
+  <!-- Canvas Confetti for Celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="navbar">
+      <div class="logo">
+        <span class="gamepad-icon">🎮</span>
+        <div class="logo-text">
+          <h1>Times Tables Quest</h1>
+          <span class="subtitle">Learn Math • Earn Switch Time</span>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <div class="switch-badge" id="switchStatusBadge" title="Nintendo Switch Connection">
+          <span class="status-dot disconnected"></span>
+          <span id="switchStatusText">Switch: Checking...</span>
+        </div>
+        <button class="icon-btn" id="openSettingsBtn" title="Settings">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="quizTab">🎯 Practice</button>
+      <button class="tab-btn" data-tab="bankTab">💰 Time Bank (<span id="navBankBalance">0</span>m)</button>
+      <button class="tab-btn" data-tab="matrixTab">📊 Tables Grid</button>
+      <button class="tab-btn" data-tab="debugTab">🎮 Switch Controls</button>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      <!-- TAB 1: QUIZ / PRACTICE -->
+      <section class="tab-pane active" id="quizTab">
+        <!-- Screen Time Bank Bar -->
+        <div class="bank-mini-bar" id="quizBankMiniBar">
+          <div class="bank-mini-info">
+            <span class="bank-mini-piggy" title="Your piggy bank is safe!">🐷</span>
+            <span class="bank-coin">🪙</span>
+            <span>Screen Time Bank: <strong id="miniBankBalance">0</strong> mins</span>
+          </div>
+          <button class="bank-quick-btn redeem-quick-btn" id="quickWithdrawBtn">✨ Redeem to Switch 🎮</button>
+        </div>
+
+        <!-- Reward Progress Meter (5 mins per 15 questions) -->
+        <div class="reward-progress-card">
+          <div class="reward-progress-header">
+            <div class="reward-title">
+              <span class="star-icon">🎯</span>
+              <span id="rewardProgressLabel">0 / 15 to +5 Min Reward</span>
+            </div>
+            <div class="today-earned">
+              Today's Earned: <strong id="todayEarnedMins">0</strong>m
+              <button class="reset-allowance-link" id="resetAllowanceHeaderBtn" title="Reset today's allowance to 0">↺ Reset</button>
+            </div>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="rewardProgressBar" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Flashcard Quiz Container -->
+        <div class="flashcard-container">
+          <div class="card-meta">
+            <span class="retry-badge hidden" id="retryBadge">🔁 Delayed Review</span>
+            <span class="timer-display" id="questionTimer">0.0s</span>
+          </div>
+
+          <div class="question-display">
+            <span class="factor" id="factorA">7</span>
+            <span class="operator">×</span>
+            <span class="factor" id="factorB">8</span>
+            <span class="equals">=</span>
+            <input
+              type="text"
+              id="answerInput"
+              class="answer-input"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="4"
+              placeholder="?"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              autofocus
+            />
+          </div>
+
+          <!-- Feedback Toast / Banner in fixed-height container -->
+          <div class="feedback-container">
+            <div class="feedback-banner hidden" id="feedbackBanner">
+              <span class="feedback-icon" id="feedbackIcon">🎉</span>
+              <span class="feedback-text" id="feedbackText">Awesome!</span>
+            </div>
+          </div>
+
+          <!-- On-screen Keypad -->
+          <div class="keypad">
+            <button class="num-key" data-val="1">1</button>
+            <button class="num-key" data-val="2">2</button>
+            <button class="num-key" data-val="3">3</button>
+            <button class="num-key" data-val="4">4</button>
+            <button class="num-key" data-val="5">5</button>
+            <button class="num-key" data-val="6">6</button>
+            <button class="num-key" data-val="7">7</button>
+            <button class="num-key" data-val="8">8</button>
+            <button class="num-key" data-val="9">9</button>
+            <button class="action-key clear-key" id="clearBtn">Clear</button>
+            <button class="num-key" data-val="0">0</button>
+            <button class="action-key submit-key" id="submitBtn">GO ➔</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: SCREEN TIME BANK -->
+      <section class="tab-pane hidden" id="bankTab">
+        <div class="bank-hero-card">
+          <div class="bank-hero-header">
+            <span class="bank-hero-icon">🏦</span>
+            <h2>Screen Time Bank</h2>
+          </div>
+
+          <!-- Cute Animated Bank Mascot Stage -->
+          <div class="bank-mascot-stage" id="bankMascotStage">
+            <!-- Ambient Floating Sparkles -->
+            <div class="mascot-particles" id="mascotParticles">
+              <span class="particle p-1">✨</span>
+              <span class="particle p-2">⭐</span>
+              <span class="particle p-3">✨</span>
+              <span class="particle p-4">💖</span>
+            </div>
+
+            <!-- Flying Coin for Redeem and Deposit Animations -->
+            <div class="flying-coin-portal hidden" id="flyingCoinPortal">
+              <div class="flying-coin-item" id="flyingCoinItem">🪙</div>
+            </div>
+
+            <!-- Switch Target Beacon that glows during redeem -->
+            <div class="switch-target-badge" id="switchTargetBadge" title="Nintendo Switch Console Target">
+              <span class="switch-target-icon">🎮</span>
+              <span class="switch-target-label">Switch</span>
+              <span class="switch-pulse-ring"></span>
+            </div>
+
+            <!-- Piggy Bank Mascot Character (Interactive SVG) -->
+            <div class="piggy-wrapper" id="piggyWrapper">
+              <svg class="piggy-svg" viewBox="0 0 200 160" width="190" height="152" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <!-- Piggy Body Gradient -->
+                  <linearGradient id="piggyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffb3c6" />
+                    <stop offset="50%" stop-color="#ff8da9" />
+                    <stop offset="100%" stop-color="#ff6b8b" />
+                  </linearGradient>
+
+                  <!-- Snout Gradient -->
+                  <linearGradient id="snoutGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffe4ec" />
+                    <stop offset="100%" stop-color="#ffaec1" />
+                  </linearGradient>
+
+                  <!-- Inner Ear Gradient -->
+                  <linearGradient id="earInnerGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ff7597" />
+                    <stop offset="100%" stop-color="#e11d48" />
+                  </linearGradient>
+
+                  <!-- Golden Coin Gradient -->
+                  <linearGradient id="coinGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#fef08a" />
+                    <stop offset="35%" stop-color="#facc15" />
+                    <stop offset="70%" stop-color="#eab308" />
+                    <stop offset="100%" stop-color="#ca8a04" />
+                  </linearGradient>
+
+                  <!-- Gold glow filter -->
+                  <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#f59e0b" flood-opacity="0.5"/>
+                  </filter>
+                </defs>
+
+                <!-- Soft Shadow -->
+                <ellipse cx="100" cy="148" rx="64" ry="9" fill="rgba(244, 63, 94, 0.18)" class="piggy-ground-shadow" />
+
+                <!-- Back Feet -->
+                <rect x="58" y="124" width="16" height="16" rx="8" fill="#e11d48" opacity="0.6"/>
+                <rect x="126" y="124" width="16" height="16" rx="8" fill="#e11d48" opacity="0.6"/>
+
+                <!-- Curly Tail (Back) -->
+                <path class="piggy-tail" d="M 40 98 C 24 94, 18 78, 26 72 C 34 66, 42 76, 34 82" fill="none" stroke="#e11d48" stroke-width="4.5" stroke-linecap="round" />
+
+                <!-- Front Left Foot -->
+                <rect class="piggy-foot foot-l" x="66" y="126" width="18" height="18" rx="9" fill="#ff6b8b" stroke="#e11d48" stroke-width="2.5"/>
+                <!-- Front Right Foot -->
+                <rect class="piggy-foot foot-r" x="116" y="126" width="18" height="18" rx="9" fill="#ff6b8b" stroke="#e11d48" stroke-width="2.5"/>
+
+                <!-- Main Plump Piggy Body -->
+                <ellipse class="piggy-body" cx="100" cy="94" rx="66" ry="52" fill="url(#piggyGrad)" stroke="#e11d48" stroke-width="3.5" />
+
+                <!-- Left Ear -->
+                <g class="piggy-ear ear-left">
+                  <path d="M 52 56 C 40 32, 60 22, 72 38 Z" fill="url(#piggyGrad)" stroke="#e11d48" stroke-width="3" stroke-linejoin="round"/>
+                  <path d="M 56 50 C 48 36, 62 30, 68 40 Z" fill="url(#earInnerGrad)"/>
+                </g>
+
+                <!-- Right Ear -->
+                <g class="piggy-ear ear-right">
+                  <path d="M 148 56 C 160 32, 140 22, 128 38 Z" fill="url(#piggyGrad)" stroke="#e11d48" stroke-width="3" stroke-linejoin="round"/>
+                  <path d="M 144 50 C 152 36, 138 30, 132 40 Z" fill="url(#earInnerGrad)"/>
+                </g>
+
+                <!-- Coin Slot -->
+                <rect x="87" y="44" width="26" height="7" rx="3.5" fill="#881337" stroke="#f59e0b" stroke-width="2" />
+
+                <!-- Floating Coin Hovering Above Slot -->
+                <g class="floating-coin-group" filter="url(#goldGlow)">
+                  <ellipse cx="100" cy="27" rx="14" ry="14" fill="url(#coinGrad)" stroke="#a16207" stroke-width="1.8" />
+                  <ellipse cx="100" cy="27" rx="10" ry="10" fill="none" stroke="#fef9c3" stroke-width="1.2" stroke-dasharray="2 1.5" />
+                  <text x="100" y="32" font-size="12" font-weight="900" fill="#713f12" text-anchor="middle">★</text>
+                </g>
+
+                <!-- Cute Anime Eyes (Normal / Blinking) -->
+                <g class="piggy-eyes normal-eyes" id="piggyNormalEyes">
+                  <!-- Left Eye -->
+                  <ellipse cx="76" cy="78" rx="7" ry="8.5" fill="#0f172a" />
+                  <circle cx="73.5" cy="75" r="3.2" fill="#ffffff" />
+                  <circle cx="78" cy="81.5" r="1.4" fill="#ffffff" />
+                  <!-- Right Eye -->
+                  <ellipse cx="124" cy="78" rx="7" ry="8.5" fill="#0f172a" />
+                  <circle cx="121.5" cy="75" r="3.2" fill="#ffffff" />
+                  <circle cx="126" cy="81.5" r="1.4" fill="#ffffff" />
+                </g>
+
+                <!-- Happy Cheerful Eyes (Happy / Celebrate Arcs) -->
+                <g class="piggy-eyes happy-eyes hidden" id="piggyHappyEyes">
+                  <path d="M 68 80 Q 76 70, 84 80" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" />
+                  <path d="M 116 80 Q 124 70, 132 80" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" />
+                </g>
+
+                <!-- Rosy Cheeks (Blush) -->
+                <ellipse class="piggy-blush blush-left" cx="58" cy="96" rx="9.5" ry="6" fill="#f43f5e" opacity="0.4" />
+                <ellipse class="piggy-blush blush-right" cx="142" cy="96" rx="9.5" ry="6" fill="#f43f5e" opacity="0.4" />
+
+                <!-- Cute Snout -->
+                <ellipse class="piggy-snout" cx="100" cy="99" rx="25" ry="17" fill="url(#snoutGrad)" stroke="#e11d48" stroke-width="3" />
+                <!-- Nostrils -->
+                <ellipse cx="92" cy="99" rx="3.5" ry="5.5" fill="#9f1239" />
+                <ellipse cx="108" cy="99" rx="3.5" ry="5.5" fill="#9f1239" />
+                <!-- Cute Mouth line under snout -->
+                <path d="M 94 116 Q 100 120, 106 116" fill="none" stroke="#e11d48" stroke-width="2.5" stroke-linecap="round" />
+              </svg>
+            </div>
+
+            <!-- Interactive Speech & Mood Bubble -->
+            <div class="piggy-bubble" id="piggyBubble">
+              <span id="piggyBubbleText">Feed me times tables to earn minutes! 🪙</span>
+            </div>
+          </div>
+
+          <div class="bank-hero-balance">
+            <span class="balance-number" id="bankHeroBalance">0</span>
+            <span class="balance-unit">Minutes Available in Bank</span>
+          </div>
+
+          <!-- Primary Redeem Action Button -->
+          <div class="redeem-cta-box">
+            <button class="btn-redeem-main" id="mainRedeemBtn">
+              <span class="redeem-sparkle">✨</span>
+              <span class="redeem-text-box">
+                <span class="redeem-title" id="mainRedeemLabel">Redeem to Switch</span>
+                <span class="redeem-subtext" id="mainRedeemSub">Instant +5 Mins Playtime 🎮</span>
+              </span>
+              <span class="redeem-arrow">➔</span>
+            </button>
+          </div>
+
+          <p class="bank-hero-desc">
+            Time earned from times tables practice is safely deposited here. Tap <strong>Redeem</strong> to send minutes straight to your Nintendo Switch!
+          </p>
+
+          <!-- Quick Redeem to Nintendo Switch Card -->
+          <div class="withdraw-card redeem-card">
+            <div class="withdraw-header">
+              <h3>🎮 Choose Amount to Redeem</h3>
+              <span class="withdraw-hint">Transfers directly to console extra playing time</span>
+            </div>
+
+            <div class="withdraw-quick-row">
+              <button class="withdraw-btn redeem-chip" data-mins="5">Redeem 5m</button>
+              <button class="withdraw-btn redeem-chip" data-mins="10">Redeem 10m</button>
+              <button class="withdraw-btn redeem-chip" data-mins="15">Redeem 15m</button>
+              <button class="withdraw-btn redeem-chip" data-mins="30">Redeem 30m</button>
+              <button class="withdraw-btn withdraw-all-btn redeem-chip" id="withdrawAllBtn">Redeem All</button>
+            </div>
+
+            <div class="custom-withdraw-row">
+              <input type="number" id="customWithdrawInput" class="form-control" placeholder="Custom mins" min="1" max="180">
+              <button class="btn-accent" id="customWithdrawBtn">✨ Redeem</button>
+            </div>
+            <div class="withdraw-status-banner hidden" id="withdrawStatusBanner"></div>
+          </div>
+
+          <!-- Bank Controls & Reset -->
+          <div class="bank-admin-row">
+            <button class="btn-secondary-sm" id="openManualAddModalBtn">➕ Add Time</button>
+            <button class="btn-secondary-sm" id="openManualDeductModalBtn">➖ Deduct Time</button>
+            <button class="btn-warning-sm" id="resetBankBtn" title="Reset bank balance back to 0">🔄 Reset Bank to 0</button>
+          </div>
+        </div>
+
+        <div class="rewards-card">
+          <div class="rewards-header">
+            <h3>📋 Reward & Bank History</h3>
+          </div>
+          <div class="rewards-list" id="rewardsList">
+            <div class="empty-state">No rewards logged yet today.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: MASTERY MATRIX -->
+      <section class="tab-pane" id="matrixTab">
+        <div class="matrix-card">
+          <div class="matrix-header">
+            <h2>Times Tables Mastery Map (2 to 12)</h2>
+            <div class="matrix-legend">
+              <span class="legend-item"><span class="swatch mastered"></span> Mastered</span>
+              <span class="legend-item"><span class="swatch learning"></span> Learning</span>
+              <span class="legend-item"><span class="swatch slow"></span> Slow/Hesitant</span>
+              <span class="legend-item"><span class="swatch struggling"></span> Needs Practice</span>
+              <span class="legend-item"><span class="swatch unseen"></span> Unseen</span>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <div class="matrix-grid" id="masteryGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: SWITCH CONTROLS & API LOGS -->
+      <section class="tab-pane" id="debugTab">
+        <div class="debug-card">
+          <div class="debug-header">
+            <h2>🎮 Nintendo Switch Status & Controls</h2>
+            <button class="btn-primary-sm" id="runDiagnosticBtn">▶ Refresh Switch State</button>
+          </div>
+
+          <!-- Live Console Overview Card -->
+          <div class="switch-overview-card" id="switchOverviewCard">
+            <div class="switch-overview-grid">
+              <div class="overview-item">
+                <span class="overview-label">Console</span>
+                <strong class="overview-val" id="overviewConsoleName">Switch #1</strong>
+              </div>
+              <div class="overview-item highlight-item">
+                <span class="overview-label">Playtime Remaining</span>
+                <strong class="overview-val highlight-val" id="overviewRemaining">-- min</strong>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">Extra Time Active</span>
+                <strong class="overview-val" id="overviewExtra">-- min</strong>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">Played Today</span>
+                <strong class="overview-val" id="overviewPlayed">-- min</strong>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">Daily Limit</span>
+                <strong class="overview-val" id="overviewLimit">-- min</strong>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">Bedtime Alarm</span>
+                <strong class="overview-val" id="overviewBedtime">--</strong>
+              </div>
+            </div>
+            <div class="overview-actions">
+              <button class="btn-warning-sm" id="resetTodayAllowanceBtn" title="Reset today's reward count and console bonus time back to 0">🔄 Reset Today's Allowance</button>
+              <button class="btn-secondary-sm" id="resetExtraTimeBtn" title="Reset extra playtime on console to 0">🔄 Reset Extra Time to 0</button>
+            </div>
+          </div>
+
+          <div class="diagnostic-results hidden" id="diagnosticResults">
+            <div class="diag-status-row">
+              <span>Auth Status: <strong id="diagAuthStatus">Checking...</strong></span>
+              <span>Token: <code id="diagTokenPreview">none</code></span>
+            </div>
+            <div class="diag-steps-box" id="diagStepsBox"></div>
+          </div>
+
+          <!-- Direct Switch Time Test -->
+          <div class="direct-boost-box">
+            <h3>⚡ Manual Playtime Boost</h3>
+            <p>Directly add extra minutes to your child's Nintendo Switch right now:</p>
+            <div class="boost-buttons">
+              <button class="boost-btn" data-mins="5">+5 Mins</button>
+              <button class="boost-btn" data-mins="10">+10 Mins</button>
+              <button class="boost-btn" data-mins="15">+15 Mins</button>
+              <button class="boost-btn" data-mins="30">+30 Mins</button>
+            </div>
+            <div class="custom-boost-row">
+              <input type="number" id="customBoostInput" class="form-control" placeholder="Custom mins (e.g. 5)" min="1" max="60">
+              <button class="btn-primary" id="customBoostBtn">Add to Switch</button>
+            </div>
+            <div class="boost-result-banner hidden" id="boostResultBanner"></div>
+          </div>
+
+          <!-- Live Debug Logs Viewer -->
+          <div class="logs-section">
+            <div class="logs-header">
+              <h3>📡 Nintendo API Logs (Requests & Responses)</h3>
+              <div class="logs-actions">
+                <button class="btn-secondary-sm" id="refreshLogsBtn">🔄 Refresh</button>
+                <button class="btn-secondary-sm" id="clearLogsBtn">🗑️ Clear</button>
+                <a href="/api/debug/log-file" target="_blank" class="btn-secondary-sm">⬇ Download Log</a>
+              </div>
+            </div>
+            <div class="log-console" id="logConsole">
+              <div class="log-entry">Loading API logs...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Celebration Modal -->
+    <div class="modal hidden" id="celebrationModal">
+      <div class="modal-content celebration-content">
+        <div class="modal-icon">🏆</div>
+        <h2>Reward Unlocked!</h2>
+        <p id="celebrationMessage">You answered 15 questions correctly and earned +5 minutes!</p>
+        <div class="switch-sync-status" id="celebrationSyncStatus">
+          🎮 Added directly to your Nintendo Switch!
+        </div>
+        <button class="btn-primary continue-btn" id="closeCelebrationBtn">Keep Playing!</button>
+      </div>
+    </div>
+
+    <!-- Manual Time Add/Deduct Modal -->
+    <div class="modal hidden" id="manualBankModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="manualBankModalTitle">Adjust Screen Time Bank</h2>
+          <button class="close-modal-btn" id="closeManualBankModalBtn">✕</button>
+        </div>
+        <div class="settings-section">
+          <div class="form-row">
+            <label id="manualBankInputLabel">Minutes to add:</label>
+            <input type="number" id="manualBankMinutesInput" class="form-control" value="10" min="1" max="180">
+          </div>
+          <div class="form-row">
+            <label>Reason / Note:</label>
+            <input type="text" id="manualBankReasonInput" class="form-control" style="width: 180px;" placeholder="e.g. Math homework bonus">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" id="confirmManualBankBtn">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parent Settings Drawer / Modal -->
+    <div class="modal hidden" id="settingsModal">
+      <div class="modal-content settings-content">
+        <div class="modal-header">
+          <h2>Parent & System Settings</h2>
+          <button class="close-modal-btn" id="closeSettingsBtn">✕</button>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎮 Reward Mode</h3>
+          <div class="form-row">
+            <label>Operating Mode:</label>
+            <select id="settingRewardMode" class="form-control" style="width: 180px;">
+              <option value="bank">Time Bank (Deposit earned time, withdraw on demand)</option>
+              <option value="nintendo">Nintendo Switch Direct (Push immediately)</option>
+              <option value="hybrid">Hybrid (Bank + Push immediately)</option>
+            </select>
+          </div>
+          <p class="setting-hint">
+            <strong>Hybrid</strong> automatically records earned minutes in your Bank AND attempts to push them to your Nintendo Switch. If offline or error, time remains safe in the Bank!
+          </p>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎮 Nintendo Switch Connection</h3>
+          <div class="nintendo-status-box" id="nintendoDetailBox">
+            <p id="nintendoDetailText">Checking connection...</p>
+          </div>
+          <div class="device-select-container">
+            <label for="deviceSelect">Reward Console:</label>
+            <select id="deviceSelect" class="form-control"></select>
+          </div>
+          <button class="btn-secondary" id="loginNintendoBtn">Connect / Re-link Nintendo Account</button>
+        </div>
+
+        <div class="settings-section">
+          <h3>⭐ Reward Rules</h3>
+          <div class="form-row">
+            <label>Correct answers per reward:</label>
+            <input type="number" id="settingQuestionsPerReward" class="form-control" min="1" max="50" value="15">
+          </div>
+          <div class="form-row">
+            <label>Minutes granted per reward:</label>
+            <input type="number" id="settingMinutesPerReward" class="form-control" min="1" max="60" value="5">
+          </div>
+          <div class="form-row">
+            <label>Max daily reward cap (mins, 0 for none):</label>
+            <input type="number" id="settingMaxDailyMins" class="form-control" min="0" max="300" value="60">
+          </div>
+          <div class="form-row">
+            <label>Hesitation speed threshold (seconds):</label>
+            <input type="number" step="0.5" id="settingSpeedThreshold" class="form-control" min="1" max="15" value="4.0">
+          </div>
+          <div class="form-row" style="margin-top: 10px;">
+            <label>Reset today's allowance:</label>
+            <button type="button" class="btn-warning-sm" id="resetAllowanceSettingsBtn" style="margin-left: auto;">🔄 Reset Today's Allowance</button>
+          </div>
+          <div class="form-row" style="margin-top: 6px;">
+            <label>Reset time bank:</label>
+            <button type="button" class="btn-warning-sm" id="resetBankSettingsBtn" style="margin-left: auto;">🔄 Reset Bank Balance</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>🎯 Active Tables to Practice (2–12)</h3>
+          <div class="table-toggles" id="tableToggles"></div>
+          <div class="table-filter-options">
+            <label class="filter-checkbox-label">
+              <input type="checkbox" id="settingExcludeTwos">
+              <span>Exclude 2× tables (Easy: doubling)</span>
+            </label>
+            <label class="filter-checkbox-label">
+              <input type="checkbox" id="settingExcludeTens">
+              <span>Exclude 10× tables (Easy: just adding 0)</span>
+            </label>
+            <label class="filter-checkbox-label">
+              <input type="checkbox" id="settingExcludeElevensSingleDigit">
+              <span>Exclude 11× with single digit numbers (11×2 ... 11×9)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nintendo Login Walkthrough Modal -->
+    <div class="modal hidden" id="loginModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Connect Nintendo Account</h2>
+          <button class="close-modal-btn" id="closeLoginModalBtn">✕</button>
+        </div>
+        <div class="login-instructions">
+          <p>1. Click the button below to open Nintendo's official sign-in page:</p>
+          <a href="#" target="_blank" class="btn-primary login-link" id="nintendoLoginLink">Open Nintendo Login ↗</a>
+          <p>2. Sign in with the account that manages Parental Controls.</p>
+          <p>3. When you see the button labeled <strong>"Select this person"</strong> (or "Use this account"):</p>
+          <ul>
+            <li>Right-click the button (or long-press)</li>
+            <li>Click <strong>Copy link address</strong> (starts with <code>npf...://</code>)</li>
+          </ul>
+          <p>4. Paste that link address below:</p>
+          <input type="text" id="callbackUrlInput" class="form-control" placeholder="npf...://...">
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" id="submitLoginCallbackBtn">Complete Connection</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/static/app.js?v=2.2"></script>
+</body>
+</html>
